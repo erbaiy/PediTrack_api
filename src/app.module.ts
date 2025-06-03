@@ -5,6 +5,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './modules/auth/auth.module';
 import { databaseConfig, jwtConfig, mailConfig } from './common/config/index';
 import { RateLimiterModule } from 'nestjs-rate-limiter';
+import { PatientModule } from './modules/patient/patient.module';
+import { AppointmentModule } from './modules/appointment/appointment.module';
 // import { SuperAdminModule } from './modules/super_admin/super-admin.module';
 
 @Module({
@@ -28,6 +30,8 @@ import { RateLimiterModule } from 'nestjs-rate-limiter';
       }),
     }),
     AuthModule,
+    PatientModule,
+    AppointmentModule,
   ],
 })
 export class AppModule {}
