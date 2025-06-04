@@ -23,6 +23,7 @@ export class AppointmentService {
 
   // CREATE an appointment
   async create(dto: CreateAppointmentDto) {
+    console.log('Creating appointment with data:', dto);
     const appointmentDateTime = moment(`${dto.date}T${dto.time}`);
     if (appointmentDateTime.isBefore(moment())) {
       throw new BadRequestException('Appointment must be in the future');

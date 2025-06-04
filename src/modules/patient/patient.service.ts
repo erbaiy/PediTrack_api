@@ -16,11 +16,13 @@ import {
   PatientQueryDto,
   UpdatePatientDto,
 } from './patient.dto';
+import { User, UserDocument } from '../auth/schema/user.schema';
 
 @Injectable()
 export class PatientService {
   constructor(
     @InjectModel(Patient.name) private patientModel: Model<PatientDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {}
 
   async create(
@@ -48,15 +50,24 @@ export class PatientService {
       //     'Doctors can only create patients assigned to themselves',
       //   );
       // }
-      const doctorId = await this.patientModel.findOne({ role: 'doctor' });
+      const saveParent = await this.userModel.create({
+        fullName: createPatientDto.fullName,
+        email: createPatientDto.email,
+        phoneNumber: createPatientDto.phoneNumber,
+        role: 'parent',
+        isVerified: true,
+        address: '',
+      });
+      const doctor = await this.userModel.findOne({ role: 'doctor' });
+      console.log('doctor', doctor._id);
+      if (!doctor) {
+        throw new NotFoundException('No doctor found in the system');
+      }
 
       const patient = new this.patientModel({
         ...createPatientDto,
-        // parentId: new Types.ObjectId(createPatientDto.parentId),
-        doctorId: doctorId,
-        growthCurveId: createPatientDto.growthCurveId
-          ? new Types.ObjectId(createPatientDto.growthCurveId)
-          : undefined,
+        parentId: saveParent._id,
+        doctorId: doctor._id,
       });
 
       return await patient.save();
@@ -68,69 +79,160 @@ export class PatientService {
     }
   }
 
-  async findAll(
-    query: PatientQueryDto,
-    // userId: string,
-    // userRole: string,
-  ): Promise<{
-    patients: Patient[];
-    total: number;
-    page: number;
-    totalPages: number;
-  }> {
-    const filter: any = {};
+  async findAll() {
+    console.log('Fetching all patients');
+    try {
+      const patients = await this.patientModel.find();
+      // .populate({
+      //   path: 'parentId',
+      //   select: '_id fullName email phoneNumber',
+      // })
+      // .populate({
+      //   path: 'doctorId',
+      //   select: '_id fullName email',
+      // });
+      console.log('First patient parent:', patients[0]?.parentId);
+      console.log('First patient doctor:', patients[0]?.doctorId);
 
-    // Role-based filtering
-    // if (userRole === 'doctor') {
-    //   filter.doctorId = new Types.ObjectId(userId);
-    // }
-
-    // Apply query filters
-    if (query.search) {
-      filter.$or = [
-        { firstName: { $regex: query.search, $options: 'i' } },
-        { lastName: { $regex: query.search, $options: 'i' } },
-      ];
+      return patients;
+    } catch (error) {
+      throw new NotFoundException(`No patients found`);
     }
-
-    if (query.parentId) {
-      filter.parentId = new Types.ObjectId(query.parentId);
-    }
-
-    if (query.doctorId) {
-      filter.doctorId = new Types.ObjectId(query.doctorId);
-    }
-
-    if (query.gender) {
-      filter.gender = query.gender;
-    }
-
-    // Pagination
-    const skip = (query.page - 1) * query.limit;
-
-    // Sorting
-    const sortObject: any = {};
-    sortObject[query.sortBy] = query.sortOrder === 'asc' ? 1 : -1;
-
-    const [patients, total] = await Promise.all([
-      this.patientModel
-        .find(filter)
-        .populate('parentId', 'name email phone')
-        .populate('doctorId', 'name email')
-        .sort(sortObject)
-        .skip(skip)
-        .limit(query.limit)
-        .lean(),
-      this.patientModel.countDocuments(filter),
-    ]);
-
-    return {
-      patients,
-      total,
-      page: query.page,
-      totalPages: Math.ceil(total / query.limit),
-    };
   }
+
+  // async findAll(): Promise<{
+  //   // Keep query as 'any' or define a custom interface if preferred
+  //   patients: Patient[];
+  //   total: number;
+  //   page: number;
+  //   totalPages: number;
+  // }> {
+  //   // const filter: any = {};
+
+  //   // --- Start of Manual Validation ---
+
+  //   // // Validate 'search' (optional, but good practice to ensure it's a string if present)
+  //   // if (query.search !== undefined && typeof query.search !== 'string') {
+  //   //   throw new BadRequestException('Search parameter must be a string.');
+  //   // }
+  //   // // Trim search term if it's a string (equivalent to @Transform)
+  //   // if (typeof query.search === 'string') {
+  //   //   query.search = query.search.trim();
+  //   // }
+
+  //   // // Validate 'parentId'
+  //   // if (query.parentId !== undefined) {
+  //   //   if (
+  //   //     typeof query.parentId !== 'string' ||
+  //   //     !Types.ObjectId.isValid(query.parentId)
+  //   //   ) {
+  //   //     throw new BadRequestException(
+  //   //       'Parent ID must be a valid Mongo ObjectId string.',
+  //   //     );
+  //   //   }
+  //   //   filter.parentId = new Types.ObjectId(query.parentId);
+  //   // }
+
+  //   // // Validate 'doctorId'
+  //   // if (query.doctorId !== undefined) {
+  //   //   if (
+  //   //     typeof query.doctorId !== 'string' ||
+  //   //     !Types.ObjectId.isValid(query.doctorId)
+  //   //   ) {
+  //   //     throw new BadRequestException(
+  //   //       'Doctor ID must be a valid Mongo ObjectId string.',
+  //   //     );
+  //   //   }
+  //   //   filter.doctorId = new Types.ObjectId(query.doctorId);
+  //   // }
+
+  //   // Validate 'gender'
+  //   // const allowedGenders = ['male', 'female', 'other']; // Define your allowed gender values
+  //   // if (query.gender !== undefined) {
+  //   //   if (
+  //   //     typeof query.gender !== 'string' ||
+  //   //     !allowedGenders.includes(query.gender.toLowerCase())
+  //   //   ) {
+  //   //     throw new BadRequestException(
+  //   //       `Gender must be one of: ${allowedGenders.join(', ')}.`,
+  //   //     );
+  //   //   }
+  //   //   filter.gender = query.gender; // Use as is, or convert to lowercase if your DB expects it
+  //   // }
+
+  //   // Validate 'page' and 'limit' - these are already robustly handled by parseInt and || defaults
+  //   const page = parseInt(query.page as any) || 1;
+  //   const limit = parseInt(query.limit as any) || 10;
+
+  //   if (isNaN(page) || page < 1) {
+  //     // Additional check for negative/zero page
+  //     throw new BadRequestException('Page number must be a positive integer.');
+  //   }
+  //   if (isNaN(limit) || limit < 1) {
+  //     // Additional check for negative/zero limit
+  //     throw new BadRequestException('Limit must be a positive integer.');
+  //   }
+
+  //   const skip = (page - 1) * limit;
+
+  //   // Validate 'sortBy'
+  //   const allowedSortBy = ['createdAt', 'firstName', 'lastName', 'birthDate']; // Add all sortable fields
+  //   if (query.sortBy !== undefined) {
+  //     if (
+  //       typeof query.sortBy !== 'string' ||
+  //       !allowedSortBy.includes(query.sortBy)
+  //     ) {
+  //       throw new BadRequestException(
+  //         `SortBy field must be one of: ${allowedSortBy.join(', ')}.`,
+  //       );
+  //     }
+  //   }
+  //   const sortBy = query.sortBy || 'createdAt'; // Apply default after validation
+
+  //   // Validate 'sortOrder'
+  //   const allowedSortOrders = ['asc', 'desc'];
+  //   if (query.sortOrder !== undefined) {
+  //     if (
+  //       typeof query.sortOrder !== 'string' ||
+  //       !allowedSortOrders.includes(query.sortOrder.toLowerCase())
+  //     ) {
+  //       throw new BadRequestException(`SortOrder must be 'asc' or 'desc'.`);
+  //     }
+  //   }
+  //   const sortOrder = query.sortOrder === 'asc' ? 1 : -1; // Apply default after validation
+
+  //   const sortObject: any = { [sortBy]: sortOrder };
+
+  //   // --- End of Manual Validation ---
+
+  //   // Search filtering (remains the same)
+  //   if (query.search) {
+  //     // Note: query.search might now be an empty string after trim if user sends spaces
+  //     filter.$or = [
+  //       { firstName: { $regex: query.search, $options: 'i' } },
+  //       { lastName: { $regex: query.search, $options: 'i' } },
+  //     ];
+  //   }
+
+  //   const [patients, total] = await Promise.all([
+  //     this.patientModel
+  //       .find(filter)
+  //       .populate('parentId', 'name email phone')
+  //       .populate('doctorId', 'name email')
+  //       .sort(sortObject)
+  //       .skip(skip)
+  //       .limit(limit)
+  //       .lean(),
+  //     this.patientModel.countDocuments(filter),
+  //   ]);
+
+  //   return {
+  //     patients,
+  //     total,
+  //     page,
+  //     totalPages: Math.ceil(total / limit),
+  //   };
+  // }
 
   async findOne(
     id: string,
@@ -185,15 +287,15 @@ export class PatientService {
     }
 
     // Role-based validation for updates
-    if (
-      userRole === 'doctor' &&
-      updatePatientDto.doctorId &&
-      updatePatientDto.doctorId !== userId
-    ) {
-      throw new ForbiddenException(
-        'Doctors cannot reassign patients to other doctors',
-      );
-    }
+    // if (
+    //   userRole === 'doctor' &&
+    //   updatePatientDto.doctorId &&
+    //   updatePatientDto.doctorId !== userId
+    // ) {
+    //   throw new ForbiddenException(
+    //     'Doctors cannot reassign patients to other doctors',
+    //   );
+    // }
 
     try {
       const updateData: any = { ...updatePatientDto };

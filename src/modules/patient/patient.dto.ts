@@ -89,16 +89,13 @@ export class CreatePatientDto {
     description: 'Parent ID (MongoDB ObjectId)',
     example: '507f1f77bcf86cd799439011',
   })
-  @IsMongoId({ message: 'Parent ID must be a valid MongoDB ObjectId' })
-  parentId: string;
-
   @ApiProperty({
     description: 'Doctor ID (MongoDB ObjectId)',
     example: '507f1f77bcf86cd799439012',
   })
-  @IsMongoId({ message: 'Doctor ID must be a valid MongoDB ObjectId' })
-  doctorId: string;
-
+  // Doctor ID must be a valid MongoDB ObjectId
+  // @IsMongoId({ message: 'Doctor ID must be a valid MongoDB ObjectId  dqsfs' })
+  // doctorId?: string;
   @ApiPropertyOptional({
     description: 'Growth curve ID (MongoDB ObjectId)',
     example: '507f1f77bcf86cd799439013',
@@ -106,6 +103,54 @@ export class CreatePatientDto {
   @IsOptional()
   @IsMongoId({ message: 'Growth curve ID must be a valid MongoDB ObjectId' })
   growthCurveId?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(2, { message: 'Full name must be at least 2 characters long' })
+  @MaxLength(100, { message: 'Full name must not exceed 100 characters' })
+  @Transform(({ value }) => value?.trim())
+  fullName: string;
+
+  @ApiProperty({
+    description: 'Email address',
+    example: 'ahmed.benali@email.com',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Transform(({ value }) => value?.trim().toLowerCase())
+  @Matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, {
+    message: 'Please enter a valid email address',
+  })
+  email: string;
+
+  @IsEnum(['parent'], {
+    message: 'Role must be parent',
+  })
+  @Transform(({ value }) => value?.toLowerCase())
+  role: string;
+
+  @ApiProperty({
+    description: 'Address',
+    example: '123 Main Street, City, Country',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(5, { message: 'Address must be at least 5 characters long' })
+  @MaxLength(200, { message: 'Address must not exceed 200 characters' })
+  @Transform(({ value }) => value?.trim())
+  address: string;
+
+  @ApiProperty({
+    description: 'Phone number in international format',
+    example: '+1234567890',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Transform(({ value }) => value?.trim())
+  @Matches(/^\+[1-9]\d{1,14}$/, {
+    message: 'Phone number must be in international format (e.g., +1234567890)',
+  })
+  phoneNumber: string;
 }
 export class UpdatePatientDto extends PartialType(CreatePatientDto) {}
 export class PatientQueryDto {

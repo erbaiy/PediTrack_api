@@ -14,6 +14,7 @@ import {
   Req,
   HttpStatus,
   HttpCode,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -34,9 +35,9 @@ import {
 } from './patient.dto';
 
 @ApiTags('Patients')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('doctor', 'assistant')
+// @ApiBearerAuth()
+// @UseGuards(JwtAuthGuard, RolesGuard)
+// @Roles('doctor', 'assistant')
 @Controller('patients')
 export class PatientController {
   constructor(private readonly patientService: PatientService) {}
@@ -65,17 +66,13 @@ export class PatientController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all patients with filtering and pagination' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Patients retrieved successfully',
-  })
-  async findAll(@Query() query: PatientQueryDto, @Req() req: any) {
-    return await this.patientService.findAll(
-      query,
-      // ,
-      //  req.user.id, req.user.role
-    );
+  async findAll() {
+    try {
+      return await this.patientService.findAll();
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+      throw new InternalServerErrorException('Failed to retrieve patients');
+    }
   }
 
   @Get(':id')

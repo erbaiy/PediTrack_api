@@ -23,21 +23,10 @@ export class Patient {
 
   @Prop({ required: false })
   birthDate: string;
-
-  @Prop({
-    required: true,
-    type: Types.ObjectId,
-    ref: 'User',
-    index: true,
-  })
+  @Prop({ type: Types.ObjectId, ref: 'User' })
   parentId: Types.ObjectId;
 
-  @Prop({
-    required: true,
-    type: Types.ObjectId,
-    ref: 'User',
-    index: true,
-  })
+  @Prop({ type: Types.ObjectId, ref: 'User' })
   doctorId: Types.ObjectId;
 
   @Prop({

@@ -16,27 +16,35 @@ export class User {
   @Prop({ required: [true, 'Email is required'], unique: true })
   email: string;
 
-  @Prop({ required: [true, 'Password is required'], minlength: [8, 'Password must be at least 8 characters long'] })
-  password: string;
+  @Prop({
+    required: [false, 'Password is required'],
+    minlength: [8, 'Password must be at least 8 characters long'],
+  })
+  password?: string;
 
-  @Prop({ required: [true, 'Role is required'], enum: ['admin', 'doctor', 'parent'], default: 'doctor' })
+  @Prop({
+    required: [true, 'Role is required'],
+    enum: ['admin', 'doctor', 'parent'],
+    default: 'doctor',
+  })
   role: string;
 
-  @Prop({ required: [true, 'Address is required'] })
-  address: string;
+  @Prop({ required: [false, 'Address is required'] })
+  address?: string;
 
-  @Prop({ 
-    required: [true, 'Phone number is required'], 
+  @Prop({
+    required: [true, 'Phone number is required'],
     unique: true,
     trim: true,
     index: true,
     // Added validation for international phone number format
     validate: {
-      validator: function(v: string) {
+      validator: function (v: string) {
         return /^\+[1-9]\d{1,14}$/.test(v);
       },
-      message: props => 'Phone number must be in international format (e.g., +1234567890)'
-    }
+      message: (props) =>
+        'Phone number must be in international format (e.g., +1234567890)',
+    },
   })
   phoneNumber: string;
 
@@ -60,6 +68,8 @@ UserSchema.pre('save', async function (next) {
   }
 });
 
-UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+UserSchema.methods.comparePassword = async function (
+  candidatePassword: string,
+): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
