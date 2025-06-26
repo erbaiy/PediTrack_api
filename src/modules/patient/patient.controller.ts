@@ -43,25 +43,11 @@ export class PatientController {
   constructor(private readonly patientService: PatientService) {}
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a new patient' })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Patient successfully created',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid input data',
-  })
-  @ApiResponse({
-    status: HttpStatus.CONFLICT,
-    description: 'Patient already exists',
-  })
+
   async create(@Body() createPatientDto: CreatePatientDto, @Req() req: any) {
     return await this.patientService.create(
       createPatientDto,
-      // req.user._id,
-      // req.user.role,
+     
     );
   }
 
@@ -95,44 +81,26 @@ export class PatientController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a patient' })
-  @ApiParam({ name: 'id', description: 'Patient ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Patient updated successfully',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Patient not found',
-  })
   async update(
     @Param('id') id: string,
-    @Body() updatePatientDto: UpdatePatientDto,
+    @Body() updatePatientDto: any,
     @Req() req: any,
   ) {
+    console.log('Update Patient DTO:', updatePatientDto);
     return await this.patientService.update(
       id,
       updatePatientDto,
-      req.user.id,
-      req.user.role,
     );
   }
 
-  @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete a patient' })
-  @ApiParam({ name: 'id', description: 'Patient ID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Patient deleted successfully',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Patient not found',
-  })
-  async remove(@Param('id') id: string, @Req() req: any) {
-    return await this.patientService.remove(id, req.user.id, req.user.role);
+@Delete(':id')
+async remove(@Param('id') id: string) {
+  if (!id) {
+    throw new InternalServerErrorException('Patient ID is required');
   }
+  return await this.patientService.remove(id);
+}
+
 
   @Get('parent/:parentId')
   @ApiOperation({ summary: 'Get patients by parent ID' })

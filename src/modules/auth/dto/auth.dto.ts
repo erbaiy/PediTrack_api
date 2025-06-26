@@ -47,6 +47,17 @@ export class RegisterDto {
   @IsNotEmpty()
   @IsString()
   role: string;
+   
+  
+  @ApiProperty({
+    example: true,
+    
+    description: 'Indicates if the user is verified',
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  isVerified?: boolean = true;
 
 }
 

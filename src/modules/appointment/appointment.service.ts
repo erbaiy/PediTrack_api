@@ -12,6 +12,7 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import * as moment from 'moment';
 import { Patient, PatientDocument } from '../patient/patient.schema';
+import { User } from '../auth/schema/user.schema';
 
 @Injectable()
 export class AppointmentService {
@@ -19,35 +20,46 @@ export class AppointmentService {
     @InjectModel(Appointment.name)
     private readonly appointmentModel: Model<Appointment>,
     @InjectModel(Patient.name) private patientModel: Model<PatientDocument>,
+    @InjectModel(User.name) private usertModel: Model<User>,
   ) {}
 
-  // CREATE an appointment
-  async create(dto: CreateAppointmentDto) {
-    console.log('Creating appointment with data:', dto);
-    const appointmentDateTime = moment(`${dto.date}T${dto.time}`);
-    if (appointmentDateTime.isBefore(moment())) {
-      throw new BadRequestException('Appointment must be in the future');
-    }
-    const doctor = await this.patientModel.findOne({ role: 'doctor' });
-    console.log('Doctor found:', doctor._id);
-
-    const existing = await this.appointmentModel.findOne({
-      doctorId: doctor._id,
-      date: dto.date,
-      time: dto.time,
-      status: { $ne: 'cancelled' },
-    });
-
-    if (existing) {
-      throw new BadRequestException('This time slot is already booked');
-    }
-
-    return this.appointmentModel.create({
-      ...dto,
-      doctorId: doctor._id,
-      status: 'confirmed',
-    });
+async create(dto: CreateAppointmentDto) {
+  console.log('Creating appointment with data:', dto);
+  
+  // Check appointment is in future
+  const appointmentDateTime = moment(`${dto.date}T${dto.time}`);
+  if (appointmentDateTime.isBefore(moment())) {
+    
+    throw new BadRequestException('Appointment must be in the future');
   }
+
+  // Find a doctor - handle case where none exists
+  const doctor = await this.usertModel.findOne({ role: 'doctor' });
+  console.log('first finding doctor', doctor);
+  if (!doctor) {
+    throw new BadRequestException('No available doctors found');
+  }
+  console.log('Doctor found:', doctor._id);
+
+  // Check for existing appointments
+  const existing = await this.appointmentModel.findOne({
+    doctorId: doctor._id,
+    date: dto.date,
+    time: dto.time,
+    status: { $ne: 'cancelled' },
+  });
+
+  if (existing) {
+    throw new BadRequestException('This time slot is already booked');
+  }
+
+  // Create appointment
+  return this.appointmentModel.create({
+    ...dto,
+    doctorId: doctor._id,
+    status: 'confirmed',
+  });
+}
 
   // GET all appointments for the current doctor
   async findAllForDoctor() {
@@ -75,8 +87,8 @@ export class AppointmentService {
     const appointment = await this.appointmentModel.findById(id);
     if (!appointment) throw new NotFoundException('Appointment not found');
 
-    appointment.status = 'cancelled';
-    return appointment.save();
+    await this.appointmentModel.deleteOne({ _id: id });
+    return { message: 'Appointment deleted successfully' };
   }
 
   // MARK as completed

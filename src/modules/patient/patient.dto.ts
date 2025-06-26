@@ -15,7 +15,7 @@ import {
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
-export class CreatePatientDto {
+export class  CreatePatientDto {
   @ApiProperty({
     description: 'First name of the patient',
     example: 'Ahmed',
@@ -152,6 +152,14 @@ export class CreatePatientDto {
   })
   phoneNumber: string;
 }
+
+
+
+
+
+
+
+
 export class UpdatePatientDto extends PartialType(CreatePatientDto) {}
 export class PatientQueryDto {
   @ApiPropertyOptional({

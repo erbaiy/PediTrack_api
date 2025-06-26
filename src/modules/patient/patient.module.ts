@@ -14,11 +14,13 @@ import { JwtAuthGuard } from '../../common/guards/JwtAuthGuard.guard';
 import { EmailVerificationService } from 'src/utils';
 import { Algorithm } from 'jsonwebtoken';
 import { User, UserSchema } from '../auth/schema/user.schema';
+import { Appointment, AppointmentSchema } from '../appointment/appointment.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Patient.name, schema: PatientSchema }]),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([{ name: Appointment.name, schema: AppointmentSchema }]),
 
     JwtModule.registerAsync({
       imports: [ConfigModule],

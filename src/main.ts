@@ -5,9 +5,16 @@ import { ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import helmet from 'helmet';
+import mongoose from 'mongoose';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Serve static files from the 'uploads' directory
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
   app.use(cookieParser());
   
   // Configure helmet with cross-origin resource policy
@@ -48,6 +55,12 @@ async function bootstrap() {
     res.header('Cross-Origin-Resource-Policy', 'cross-origin');
     next();
   }, express.static('uploads'));
+  
+
+  mongoose.connection.once('open', () => {
+  console.log('Connected. Collections:', Object.keys(mongoose.connection.collections));
+});
+
 
   // Try multiple ports if the default one is in use
   const ports = [3005, 3006, 3007, 3008, 3009]; // Try these ports in sequence

@@ -30,9 +30,10 @@ export class UserService {
           'password',
           'phoneNumber',
           'address',
-          'role',
+          
         ]),
-
+        isVerified: true,
+        role: 'doctor',
         loginHistory: {
           history: [],
           lastLogin: new Date(),
@@ -116,4 +117,7 @@ export class UserService {
       return { success: false, error: error.message };
     }
   }
+
+
+  
 }

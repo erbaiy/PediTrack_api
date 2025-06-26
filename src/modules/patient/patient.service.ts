@@ -17,12 +17,15 @@ import {
   UpdatePatientDto,
 } from './patient.dto';
 import { User, UserDocument } from '../auth/schema/user.schema';
+import { Appointment } from '../appointment/appointment.schema';
+import { AppointmentModule } from '../appointment/appointment.module';
 
 @Injectable()
 export class PatientService {
   constructor(
     @InjectModel(Patient.name) private patientModel: Model<PatientDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Appointment.name) private readonly appointmentModel: Model<AppointmentModule>,
   ) {}
 
   async create(
@@ -79,160 +82,108 @@ export class PatientService {
     }
   }
 
-  async findAll() {
-    console.log('Fetching all patients');
-    try {
-      const patients = await this.patientModel.find();
-      // .populate({
-      //   path: 'parentId',
-      //   select: '_id fullName email phoneNumber',
-      // })
-      // .populate({
-      //   path: 'doctorId',
-      //   select: '_id fullName email',
-      // });
-      console.log('First patient parent:', patients[0]?.parentId);
-      console.log('First patient doctor:', patients[0]?.doctorId);
 
-      return patients;
-    } catch (error) {
-      throw new NotFoundException(`No patients found`);
-    }
+
+
+//   async findAll() {
+//   try {
+//     // Method 1: Using aggregation with proper ObjectId conversion + parent join
+//     const patients = await this.patientModel.aggregate([
+//       {
+//         $lookup: {
+//           from: 'appointments', // Make sure this matches your collection name exactly
+//           let: { patientId: '$_id' },
+//           pipeline: [
+//             {
+//               $match: {
+//                 $expr: {
+//                   $or: [
+//                     // Handle case where patientId is ObjectId
+//                     { $eq: ['$patientId', '$$patientId'] },
+//                     // Handle case where patientId is string
+//                     { $eq: ['$patientId', { $toString: '$$patientId' }] },
+//                     // Handle case where patientId needs to be converted to ObjectId
+//                     { $eq: [{ $toObjectId: '$patientId' }, '$$patientId'] }
+//                   ]
+//                 }
+//               }
+//             }
+//           ],
+//           as: 'appointments',
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: 'users', // Join with users collection to get parent info
+//           localField: 'parentId',
+//           foreignField: '_id',
+//           as: 'parent',
+//         },
+//       },
+//       {
+//         $addFields: {
+//           appointments: {
+//             $ifNull: ['$appointments', []],
+//           },
+//           appointmentCount: { $size: { $ifNull: ['$appointments', []] } },
+//           parent: { $arrayElemAt: ['$parent', 0] }, // Convert parent array to single object
+//         },
+//       },
+//     ]);
+//     return patients;
+//   } catch (error) {
+//     console.error('Aggregation error:', error);
+//     throw new NotFoundException(`No patients found: ${error.message}`);
+//   }
+// }
+
+async findAll() {
+  try {
+    const patients = await this.patientModel.aggregate([
+      {
+        $lookup: {
+          from: 'appointments',
+          let: { patientId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    // Handle ObjectId-to-ObjectId match
+                    { $eq: ['$patientId', '$$patientId'] },
+                    // Handle string-to-string match
+                    { $eq: ['$patientId', { $toString: '$$patientId' }] },
+                    // Removed the problematic $toObjectId conversion
+                  ]
+                }
+              }
+            }
+          ],
+          as: 'appointments',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'parentId',
+          foreignField: '_id',
+          as: 'parent',
+        },
+      },
+      {
+        $addFields: {
+          appointments: { $ifNull: ['$appointments', []] },
+          appointmentCount: { $size: { $ifNull: ['$appointments', []] } },
+          parent: { $arrayElemAt: ['$parent', 0] },
+        },
+      },
+    ]);
+    return patients;
+  } catch (error) {
+    console.error('Aggregation error:', error);
+    throw new NotFoundException(`No patients found: ${error.message}`);
   }
-
-  // async findAll(): Promise<{
-  //   // Keep query as 'any' or define a custom interface if preferred
-  //   patients: Patient[];
-  //   total: number;
-  //   page: number;
-  //   totalPages: number;
-  // }> {
-  //   // const filter: any = {};
-
-  //   // --- Start of Manual Validation ---
-
-  //   // // Validate 'search' (optional, but good practice to ensure it's a string if present)
-  //   // if (query.search !== undefined && typeof query.search !== 'string') {
-  //   //   throw new BadRequestException('Search parameter must be a string.');
-  //   // }
-  //   // // Trim search term if it's a string (equivalent to @Transform)
-  //   // if (typeof query.search === 'string') {
-  //   //   query.search = query.search.trim();
-  //   // }
-
-  //   // // Validate 'parentId'
-  //   // if (query.parentId !== undefined) {
-  //   //   if (
-  //   //     typeof query.parentId !== 'string' ||
-  //   //     !Types.ObjectId.isValid(query.parentId)
-  //   //   ) {
-  //   //     throw new BadRequestException(
-  //   //       'Parent ID must be a valid Mongo ObjectId string.',
-  //   //     );
-  //   //   }
-  //   //   filter.parentId = new Types.ObjectId(query.parentId);
-  //   // }
-
-  //   // // Validate 'doctorId'
-  //   // if (query.doctorId !== undefined) {
-  //   //   if (
-  //   //     typeof query.doctorId !== 'string' ||
-  //   //     !Types.ObjectId.isValid(query.doctorId)
-  //   //   ) {
-  //   //     throw new BadRequestException(
-  //   //       'Doctor ID must be a valid Mongo ObjectId string.',
-  //   //     );
-  //   //   }
-  //   //   filter.doctorId = new Types.ObjectId(query.doctorId);
-  //   // }
-
-  //   // Validate 'gender'
-  //   // const allowedGenders = ['male', 'female', 'other']; // Define your allowed gender values
-  //   // if (query.gender !== undefined) {
-  //   //   if (
-  //   //     typeof query.gender !== 'string' ||
-  //   //     !allowedGenders.includes(query.gender.toLowerCase())
-  //   //   ) {
-  //   //     throw new BadRequestException(
-  //   //       `Gender must be one of: ${allowedGenders.join(', ')}.`,
-  //   //     );
-  //   //   }
-  //   //   filter.gender = query.gender; // Use as is, or convert to lowercase if your DB expects it
-  //   // }
-
-  //   // Validate 'page' and 'limit' - these are already robustly handled by parseInt and || defaults
-  //   const page = parseInt(query.page as any) || 1;
-  //   const limit = parseInt(query.limit as any) || 10;
-
-  //   if (isNaN(page) || page < 1) {
-  //     // Additional check for negative/zero page
-  //     throw new BadRequestException('Page number must be a positive integer.');
-  //   }
-  //   if (isNaN(limit) || limit < 1) {
-  //     // Additional check for negative/zero limit
-  //     throw new BadRequestException('Limit must be a positive integer.');
-  //   }
-
-  //   const skip = (page - 1) * limit;
-
-  //   // Validate 'sortBy'
-  //   const allowedSortBy = ['createdAt', 'firstName', 'lastName', 'birthDate']; // Add all sortable fields
-  //   if (query.sortBy !== undefined) {
-  //     if (
-  //       typeof query.sortBy !== 'string' ||
-  //       !allowedSortBy.includes(query.sortBy)
-  //     ) {
-  //       throw new BadRequestException(
-  //         `SortBy field must be one of: ${allowedSortBy.join(', ')}.`,
-  //       );
-  //     }
-  //   }
-  //   const sortBy = query.sortBy || 'createdAt'; // Apply default after validation
-
-  //   // Validate 'sortOrder'
-  //   const allowedSortOrders = ['asc', 'desc'];
-  //   if (query.sortOrder !== undefined) {
-  //     if (
-  //       typeof query.sortOrder !== 'string' ||
-  //       !allowedSortOrders.includes(query.sortOrder.toLowerCase())
-  //     ) {
-  //       throw new BadRequestException(`SortOrder must be 'asc' or 'desc'.`);
-  //     }
-  //   }
-  //   const sortOrder = query.sortOrder === 'asc' ? 1 : -1; // Apply default after validation
-
-  //   const sortObject: any = { [sortBy]: sortOrder };
-
-  //   // --- End of Manual Validation ---
-
-  //   // Search filtering (remains the same)
-  //   if (query.search) {
-  //     // Note: query.search might now be an empty string after trim if user sends spaces
-  //     filter.$or = [
-  //       { firstName: { $regex: query.search, $options: 'i' } },
-  //       { lastName: { $regex: query.search, $options: 'i' } },
-  //     ];
-  //   }
-
-  //   const [patients, total] = await Promise.all([
-  //     this.patientModel
-  //       .find(filter)
-  //       .populate('parentId', 'name email phone')
-  //       .populate('doctorId', 'name email')
-  //       .sort(sortObject)
-  //       .skip(skip)
-  //       .limit(limit)
-  //       .lean(),
-  //     this.patientModel.countDocuments(filter),
-  //   ]);
-
-  //   return {
-  //     patients,
-  //     total,
-  //     page,
-  //     totalPages: Math.ceil(total / limit),
-  //   };
-  // }
+}
 
   async findOne(
     id: string,
@@ -266,61 +217,81 @@ export class PatientService {
 
   async update(
     id: string,
-    updatePatientDto: UpdatePatientDto,
-    userId: string,
-    userRole: string,
-  ): Promise<Patient> {
+    updatePatientDto: any,
+  ): Promise<any> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid patient ID format');
     }
 
-    const filter: any = { _id: new Types.ObjectId(id) };
-
-    // Role-based filtering
-    if (userRole === 'doctor') {
-      filter.doctorId = new Types.ObjectId(userId);
-    }
-
-    const existingPatient = await this.patientModel.findOne(filter);
+    // Check if patient exists
+    const existingPatient = await this.patientModel.findById(id);
     if (!existingPatient) {
       throw new NotFoundException('Patient not found');
     }
 
-    // Role-based validation for updates
-    // if (
-    //   userRole === 'doctor' &&
-    //   updatePatientDto.doctorId &&
-    //   updatePatientDto.doctorId !== userId
-    // ) {
-    //   throw new ForbiddenException(
-    //     'Doctors cannot reassign patients to other doctors',
-    //   );
-    // }
+    // Check for duplicate patient (same name, birth date, and parent)
+    const duplicatePatient = await this.patientModel.findOne({
+      _id: { $ne: id },
+      firstName: { $regex: new RegExp(updatePatientDto.firstName, 'i') },
+      lastName: { $regex: new RegExp(updatePatientDto.lastName, 'i') },
+      birthDate: updatePatientDto.birthDate,
+      // parentId: updatePatientDto.parentId ? new Types.ObjectId(updatePatientDto.parentId) : existingPatient.parentId,
+    });
+    if (duplicatePatient) {
+      throw new ConflictException(
+        'A patient with the same name, birth date, and parent already exists',
+      );
+    }
+
+    // If parent info is being updated, update the parent user as well
+    if (
+      updatePatientDto.fullName ||
+      updatePatientDto.email ||
+      updatePatientDto.phoneNumber
+    ) {
+      await this.userModel.findByIdAndUpdate(
+        existingPatient.parentId,
+        {
+          ...(updatePatientDto.fullName && { fullName: updatePatientDto.fullName }),
+          ...(updatePatientDto.email && { email: updatePatientDto.email }),
+          ...(updatePatientDto.phoneNumber && { phoneNumber: updatePatientDto.phoneNumber }),
+        },
+        { new: true },
+      );
+    }
+
+  
+     let doctorId = existingPatient.doctorId;
+    
+
+    // Prepare update data
+    const updateData: any = {
+      ...updatePatientDto,
+      doctorId,
+    };
+
+    // Convert string IDs to ObjectIds if present
+    if (updateData.parentId) {
+      updateData.parentId = new Types.ObjectId(updateData.parentId);
+    }
+    if (updateData.doctorId) {
+      updateData.doctorId = new Types.ObjectId(updateData.doctorId);
+    }
+    if (updateData.growthCurveId) {
+      updateData.growthCurveId = new Types.ObjectId(updateData.growthCurveId);
+    }
 
     try {
-      const updateData: any = { ...updatePatientDto };
-
-      // Convert string IDs to ObjectIds
-      if (updateData.parentId) {
-        updateData.parentId = new Types.ObjectId(updateData.parentId);
-      }
-      if (updateData.doctorId) {
-        updateData.doctorId = new Types.ObjectId(updateData.doctorId);
-      }
-      if (updateData.growthCurveId) {
-        updateData.growthCurveId = new Types.ObjectId(updateData.growthCurveId);
-      }
-
-      const patient = await this.patientModel
+      const updatedPatient = await this.patientModel
         .findByIdAndUpdate(id, updateData, {
           new: true,
           runValidators: true,
         })
-        .populate('parentId', 'name email phone')
-        .populate('doctorId', 'name email')
+        .populate('parentId', 'fullName email phoneNumber')
+        .populate('doctorId', 'fullName email')
         .lean();
 
-      return patient;
+      return updatedPatient;
     } catch (error) {
       if (error.name === 'ValidationError') {
         throw new BadRequestException(`Validation failed: ${error.message}`);
@@ -330,31 +301,31 @@ export class PatientService {
   }
 
   async remove(
-    id: string,
-    userId: string,
-    userRole: string,
+    patientId:any,
+    // userId: string,
+    // userRole: string,
   ): Promise<{ message: string }> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid patient ID format');
-    }
 
-    const filter: any = { _id: new Types.ObjectId(id) };
+    console.log('Removing patient with ID:', patientId);
+    // if (!Types.ObjectId.isValid(patientId)) {
+    //   throw new BadRequestException('Invalid patient ID format');
+    // }
+
 
     // Role-based filtering
-    if (userRole === 'doctor') {
-      filter.doctorId = new Types.ObjectId(userId);
-    }
+   
 
-    const patient = await this.patientModel.findOne(filter);
+    const patient = await this.patientModel.deleteOne({ _id: patientId });
+    console.log('Found patient:', patient);
     if (!patient) {
       throw new NotFoundException('Patient not found');
     }
 
-    // Soft delete by adding deletedAt field
-    await this.patientModel.findByIdAndUpdate(id, {
-      deletedAt: new Date(),
-      isActive: false,
-    });
+    // // Soft delete by adding deletedAt field
+    // await this.patientModel.findByIdAndUpdate(patientId, {
+    //   deletedAt: new Date(),
+    //   isActive: false,
+    // });
 
     return { message: 'Patient successfully deleted' };
   }

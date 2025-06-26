@@ -263,16 +263,16 @@ export class AuthService {
         'Invalid user data after registration',
       );
     }
-    const emailSent = await this.sendVerificationEmail(
-      registered.user._id.toString(),
-      registered.user.email,
-    );
+    // const emailSent = await this.sendVerificationEmail(
+    //   registered.user._id.toString(),
+    //   registered.user.email,
+    // );
 
-    if (!emailSent) {
-      throw new InternalServerErrorException(
-        'Failed to send verification email',
-      );
-    }
+    // if (!emailSent) {
+    //   throw new InternalServerErrorException(
+    //     'Failed to send verification email',
+    //   );
+    // }
 
     return {
       status: HttpStatus.CREATED,

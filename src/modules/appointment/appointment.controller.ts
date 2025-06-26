@@ -7,6 +7,7 @@ import {
   Delete,
   Body,
   Query,
+  Put,
   //   UseGuards,
 } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
@@ -30,18 +31,17 @@ export class AppointmentController {
   @ApiOperation({ summary: 'Create a new appointment (Doctor only)' })
   @ApiResponse({ status: 201, description: 'Appointment created' })
   async create(
-    @Body() dto: CreateAppointmentDto,
+    @Body() dto: any,
     // @User() doctor: CurrentUserDto,
   ) {
+    console.log('Creating appointment with data:', dto);
     return this.appointmentService.create({
       ...dto,
-      //   doctorId: doctor._id,
     });
   }
 
   @Get()
-  //   @Roles('doctor')
-  @ApiOperation({ summary: 'Get all appointments for the doctor' })
+  @ApiOperation({ summary: 'Get all appointments ' })
   async findAll() {
     return this.appointmentService.findAllForDoctor();
   }
@@ -53,10 +53,10 @@ export class AppointmentController {
     return this.appointmentService.findById(id);
   }
 
-  @Patch(':id')
+  @Put(':id')
   //   @Roles('doctor')
   @ApiOperation({ summary: 'Update an appointment' })
-  async update(@Param('id') id: string, @Body() dto: UpdateAppointmentDto) {
+  async update(@Param('id') id: string, @Body() dto:any) {
     return this.appointmentService.update(id, dto);
   }
 

@@ -15,6 +15,7 @@ import {
   Delete,
   Param,
   Put,
+  UploadedFile,
 } from '@nestjs/common';
 import { AuthService } from './services/auth.service';
 import {
@@ -37,7 +38,7 @@ import {
   Token,
   TokenLocation,
 } from '../../common/guards/JwtAuthGuard.guard';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { UseInterceptors } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
 import { validate } from 'class-validator';
@@ -177,12 +178,7 @@ export class AuthController {
   ): Promise<{ message: string; statusCode: number }> {
     return this.authService.resetPassword(token, newPassword);
   }
-  @UseGuards(JwtAuthGuard)
-  @Get('gestionnaire')
-  @Roles('livreur') // Seul les gestionnaires peuvent accéder à cette route
-  getAdminDashboard() {
-    return 'gestionnaire dashboard';
-  }
+
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
@@ -209,9 +205,12 @@ export class AuthController {
   async updateUserRole(@Param('id') id: string, @Body('role') role: string) {
     return this.userService.updateUserRole(id, role);
   }
-  //  delter user
+  //  delete user
   @Delete('users/:id')
   async deleteUser(@Param('id') id: string) {
     return this.userService.deleteUser(id);
   }
+
+ 
+
 }

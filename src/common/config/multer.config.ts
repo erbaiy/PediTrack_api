@@ -15,7 +15,7 @@
 
   export const restaurantMulterConfig = {
     storage: diskStorage({
-      destination: './uploads/restaurants',
+      destination: './uploads/documents',
       filename: (req, file, callback) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         callback(null, `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`);
@@ -29,7 +29,7 @@
 
   export const menuItemMulterConfig = {
     storage: diskStorage({
-      destination: './uploads/menu-items', // Ensure this is correct
+      destination: './uploads/documents', // Ensure this is correct
       filename: (req, file, callback) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         callback(null, `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`);
