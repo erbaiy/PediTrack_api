@@ -7,6 +7,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -19,6 +20,7 @@ import {
 import { User, UserDocument } from '../auth/schema/user.schema';
 import { Appointment } from '../appointment/appointment.schema';
 import { AppointmentModule } from '../appointment/appointment.module';
+import e from 'express';
 
 @Injectable()
 export class PatientService {
@@ -28,11 +30,8 @@ export class PatientService {
     @InjectModel(Appointment.name) private readonly appointmentModel: Model<AppointmentModule>,
   ) {}
 
-  async create(
-    createPatientDto: CreatePatientDto,
-    // userId: string,
-    // userRole: string,
-  ): Promise<Patient> {
+  async create(createPatientDto): Promise<Patient> {
+    console.log('Creating patient with DTO:', createPatientDto);
     try {
       // Check if patient already exists (same name, birth date, and parent)
       const existingPatient = await this.patientModel.findOne({
@@ -43,33 +42,33 @@ export class PatientService {
       });
 
       if (existingPatient) {
-        throw new ConflictException(
-          'A patient with the same name, birth date, and parent already exists',
-        );
+        // Patient already exists, return it
+        return existingPatient;
       }
-      // Role-based validation
-      // if (userRole === 'doctor' && createPatientDto.doctorId !== userId) {
-      //   throw new ForbiddenException(
-      //     'Doctors can only create patients assigned to themselves',
-      //   );
-      // }
-      const saveParent = await this.userModel.create({
-        fullName: createPatientDto.fullName,
-        email: createPatientDto.email,
-        phoneNumber: createPatientDto.phoneNumber,
-        role: 'parent',
-        isVerified: true,
-        address: '',
-      });
+
+      let parentId = createPatientDto.parentId;
+
+      // If parentId is not provided, create a new parent
+      if (!parentId && (createPatientDto.fullName || createPatientDto.email || createPatientDto.phoneNumber)) {
+        const parent = await this.userModel.create({
+          fullName: createPatientDto.fullName,
+          email: createPatientDto.email,
+          phoneNumber: createPatientDto.phoneNumber,
+          role: 'parent',
+          isVerified: true,
+          address: '',
+        });
+        parentId = parent._id;
+      }
+
       const doctor = await this.userModel.findOne({ role: 'doctor' });
-      console.log('doctor', doctor._id);
       if (!doctor) {
         throw new NotFoundException('No doctor found in the system');
       }
 
       const patient = new this.patientModel({
         ...createPatientDto,
-        parentId: saveParent._id,
+        parentId,
         doctorId: doctor._id,
       });
 
@@ -83,6 +82,51 @@ export class PatientService {
   }
 
 
+
+
+  
+  async createParent(
+    createPatientDto
+  ): Promise<UserDocument> {
+    try {
+      const existingParent = await this.userModel.findOne({
+        email: createPatientDto.email,
+        role: 'parent',
+      });
+
+      if (existingParent) {
+        throw new ConflictException('Parent with this email already exists');
+      }
+
+      const parent = new this.userModel({
+        fullName: createPatientDto.fullName,
+        email: createPatientDto.email,
+        phoneNumber: createPatientDto.phoneNumber,
+        role: 'parent',
+        isVerified: true,
+        address: '',
+      });
+
+      return await parent.save();
+    } catch (error) {
+      if (error.name === 'ValidationError') {
+        throw new BadRequestException(`Validation failed: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+
+
+  // getParent
+  async getParent(): Promise<UserDocument[]> {
+    try {
+      return await this.userModel.find({ role: 'parent' });
+    } catch (error) {
+      console.error('Error fetching parents:', error);
+      throw new InternalServerErrorException('Failed to retrieve parents');
+    }
+  }
 
 
 //   async findAll() {
@@ -141,41 +185,56 @@ async findAll() {
   try {
     const patients = await this.patientModel.aggregate([
       {
-        $lookup: {
-          from: 'appointments',
-          let: { patientId: '$_id' },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $or: [
-                    // Handle ObjectId-to-ObjectId match
-                    { $eq: ['$patientId', '$$patientId'] },
-                    // Handle string-to-string match
-                    { $eq: ['$patientId', { $toString: '$$patientId' }] },
-                    // Removed the problematic $toObjectId conversion
-                  ]
-                }
-              }
-            }
-          ],
-          as: 'appointments',
-        },
+      $lookup: {
+        from: 'appointments',
+        let: { patientId: '$_id' },
+        pipeline: [
+        {
+          $match: {
+          $expr: {
+            $or: [
+            // ObjectId-to-ObjectId match
+            { $eq: ['$patientId', '$$patientId'] },
+            // String-to-string match
+            { $eq: ['$patientId', { $toString: '$$patientId' }] },
+            // ObjectId-to-string match
+            { $eq: [{ $toString: '$patientId' }, { $toString: '$$patientId' }] },
+            // String-to-ObjectId match (if possible)
+            { $eq: [{ $toObjectId: '$patientId' }, '$$patientId'] }
+            ]
+          }
+          }
+        }
+        ],
+        as: 'appointments',
+      },
       },
       {
-        $lookup: {
-          from: 'users',
-          localField: 'parentId',
-          foreignField: '_id',
-          as: 'parent',
-        },
+      $lookup: {
+        from: 'users',
+        let: { parentId: '$parentId' },
+        pipeline: [
+        {
+          $match: {
+          $expr: {
+            $or: [
+            { $eq: ['$_id', '$$parentId'] },
+            { $eq: [{ $toString: '$_id' }, { $toString: '$$parentId' }] },
+            { $eq: ['$_id', { $toObjectId: '$$parentId' }] }
+            ]
+          }
+          }
+        }
+        ],
+        as: 'parent',
+      },
       },
       {
-        $addFields: {
-          appointments: { $ifNull: ['$appointments', []] },
-          appointmentCount: { $size: { $ifNull: ['$appointments', []] } },
-          parent: { $arrayElemAt: ['$parent', 0] },
-        },
+      $addFields: {
+        appointments: { $ifNull: ['$appointments', []] },
+        appointmentCount: { $size: { $ifNull: ['$appointments', []] } },
+        parent: { $arrayElemAt: ['$parent', 0] },
+      },
       },
     ]);
     return patients;

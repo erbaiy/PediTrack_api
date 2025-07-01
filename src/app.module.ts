@@ -13,6 +13,7 @@ import { PrescriptionModule } from './modules/prescription/prescription.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { FamiliesModule } from './modules/families/families.module';
 // import { SuperAdminModule } from './modules/super_admin/super-admin.module';
 
 @Module({
@@ -44,6 +45,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     PrescriptionModule,
     DocumentsModule,
     DashboardModule,
+    FamiliesModule,
   ],
 })
 export class AppModule {}

@@ -1,6 +1,4 @@
-// ====================
-// 4. Patient Controller (patient.controller.ts)
-// ====================
+
 import {
   Controller,
   Get,
@@ -44,11 +42,24 @@ export class PatientController {
 
   @Post()
 
-  async create(@Body() createPatientDto: CreatePatientDto, @Req() req: any) {
+  async create(@Body() createPatientDto, @Req() req: any) {
     return await this.patientService.create(
       createPatientDto,
      
     );
+  }
+
+
+  @Post('create-parent')
+  async createParent(@Body() createPatientDto, @Req() req: any) {
+    return await this.patientService.createParent(
+      createPatientDto,
+    );
+  }
+
+ @Get('parents')
+  getParent() {
+    return this.patientService.getParent();
   }
 
   @Get()
