@@ -6,7 +6,7 @@ export class DashboardStatsDto {
   appointmentsToday: number;
   vaccinesThisMonth: number;
   vaccinesLastMonth: number;
-  revenue: number;
+  revenue: any;
   recentPatients: {
     id: string;
     name: string;

@@ -92,17 +92,15 @@ private async getVaccinesLastMonth(startOfMonth: Date): Promise<number> {
 }
 
   // Calcul statique des revenus basé sur l'activité
-  private calculateStaticRevenue(appointmentsToday: number, vaccinesThisMonth: number): number {
-    // Prix moyens fictifs
-    const consultationPrice = 45; // 45€ par consultation
-    const vaccinationPrice = 25;  // 25€ par vaccination
+  private calculateStaticRevenue(appointmentsToday: number, vaccinesThisMonth: number):any[] {
+  
     
     // Estimation des consultations du mois (approximation)
     const estimatedMonthlyConsultations = appointmentsToday * 22; // 22 jours ouvrables
-    const consultationRevenue = estimatedMonthlyConsultations * consultationPrice;
-    const vaccinationRevenue = vaccinesThisMonth * vaccinationPrice;
-    
-    return Math.round(consultationRevenue + vaccinationRevenue);
+    const consultationRevenue = estimatedMonthlyConsultations; // 45€ par consultation
+    const vaccinationRevenue = vaccinesThisMonth;  // 25€ par vaccination
+
+    return [consultationRevenue, vaccinationRevenue];
   }
 
 private async getRecentPatients(doctorId: string) {
