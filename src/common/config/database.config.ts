@@ -2,7 +2,7 @@
 import { registerAs } from '@nestjs/config';
 
 export default registerAs('database', () => ({
-  uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/PediTrack',
+  uri: process.env.MONGODB_URI || 'mongodb+srv://younesserbai:osHjcggXenJ2W2ee@peditrackdb.woxoz7b.mongodb.net/',
   // options: {
   //   useNewUrlParser: true,
   //   useUnifiedTopology: true,
