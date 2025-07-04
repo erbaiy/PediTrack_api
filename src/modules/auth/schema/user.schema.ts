@@ -32,21 +32,21 @@ export class User {
   @Prop({ required: [false, 'Address is required'] })
   address?: string;
 
-  @Prop({
-    required: [true, 'Phone number is required'],
-    unique: true,
-    trim: true,
-    index: true,
-    // Added validation for international phone number format
-    validate: {
-      validator: function (v: string) {
-        return /^\+[1-9]\d{1,14}$/.test(v);
+    @Prop({
+      required: [true, 'Phone number is required'],
+      unique: true,
+      trim: true,
+      index: true,
+      // Added validation for international phone number format
+      validate: {
+        validator: function (v: string) {
+          return /^\+[1-9]\d{1,14}$/.test(v);
+        },
+        message: (props) =>
+          'Phone number must be in international format (e.g., +1234567890)',
       },
-      message: (props) =>
-        'Phone number must be in international format (e.g., +1234567890)',
-    },
-  })
-  phoneNumber: string;
+    })
+    phoneNumber: string;
 
   @Prop({ default: false })
   isVerified: boolean;

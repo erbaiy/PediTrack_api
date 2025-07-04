@@ -45,10 +45,8 @@ export class CreateRestaurantDto {
 
   @ApiProperty({ example: '+1234567890', description: 'Phone number' })
   @IsString()
-  @Matches(/^\+\d{1,3}\d{4,14}$/, {
-    message: 'Phone number must be in international format (e.g., +1234567890)',
-  })
   @IsNotEmpty()
+  @Matches(/^\+?[0-9\s\-()]{7,20}$/, { message: 'Phone number must contain only digits and may include +, -, spaces, or parentheses' })
   phoneNumber: string;
 
   @ApiProperty({ example: false, description: 'Approval status' })

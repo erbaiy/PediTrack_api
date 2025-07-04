@@ -140,17 +140,16 @@ export class  CreatePatientDto {
   @Transform(({ value }) => value?.trim())
   address: string;
 
-  @ApiProperty({
-    description: 'Phone number in international format',
-    example: '+1234567890',
-  })
+ 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Phone number is required' })
   @Transform(({ value }) => value?.trim())
   @Matches(/^\+[1-9]\d{1,14}$/, {
     message: 'Phone number must be in international format (e.g., +1234567890)',
   })
   phoneNumber: string;
+
+  
 }
 
 
